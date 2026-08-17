@@ -264,20 +264,21 @@ local function BuyItem(itemPos, itemName)
     WalkTo(itemPos, 8, false)
     task.wait(0.5)
 
-    -- Ищем ProximityPrompt в WorldBuyableItems
-    for _, obj in pairs(workspace.WorldBuyableItems:GetDescendants()) do
-        if obj:IsA("ProximityPrompt") then
-            local parent = obj.Parent
-            if parent and parent:IsA("BasePart") then
-                local dist = (parent.Position - itemPos).Magnitude
-                if dist < 10 then
-                    local actionText = obj.ActionText or ""
-                    if actionText:lower():find("buy") or actionText:lower():find("купить") then
-                        pcall(fireproximityprompt, obj)
-                        task.wait(1.5)
-                        if HasItem(itemName) then return true end
-                    end
-                end
+    -- Ищем сам предмет в WorldBuyableItems
+    for _, item in pairs(workspace.WorldBuyableItems:GetDescendants()) do
+        if item:IsA("Model") and item.Name == itemName then
+            local itemCenter = item:GetPivot().Position
+            local dist = (itemCenter - itemPos).Magnitude
+
+            if dist < 15 then
+                -- Покупаем через remote (передаём сам объект Model)
+                pcall(function()
+                    local remote = RS.__remotes.WorldBuyableItemService.PurchaseWorldBuyableItem
+                    remote:FireServer(item)
+                end)
+
+                task.wait(1.5)
+                if HasItem(itemName) then return true end
             end
         end
     end
